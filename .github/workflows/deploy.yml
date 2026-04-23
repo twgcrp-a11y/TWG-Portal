@@ -1,4 +1,4 @@
-name: Build & Deploy to cPanel
+name: Build & Commit dist to repo
 
 on:
   push:
@@ -6,13 +6,15 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build-and-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -26,8 +28,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to cPanel via cURL webhook
+      - name: Commit dist/ to repo
         run: |
-          curl -s --max-time 30 \
-            "${{ secrets.CPANEL_DEPLOY_WEBHOOK }}" \
-            -o /dev/null -w "HTTP Status: %{http_code}\n"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f dist/
+          git diff --staged --quiet || git commit -m "ci: update dist/ build [skip ci]"
+          git push
