@@ -3,7 +3,7 @@ name: Build & Deploy to cPanel
 on:
   push:
     branches:
-      - main          # triggers on every push to main
+      - main
 
 jobs:
   build-and-deploy:
@@ -11,35 +11,32 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ── 1. Checkout code ────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Setup Node.js ────────────────────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # ── 3. Install dependencies ─────────────────────────────────────────────
       - name: Install dependencies
         run: npm ci
 
-      # ── 4. Build React app ──────────────────────────────────────────────────
       - name: Build
         run: npm run build
 
-      # ── 5. Deploy dist/ to cPanel via FTP ───────────────────────────────────
-      - name: Deploy to cPanel via FTP
+      - name: Deploy to cPanel via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}        # e.g. ftp.technoworldgroup.com
-          username: ${{ secrets.FTP_USERNAME }}    # cPanel FTP username
-          password: ${{ secrets.FTP_PASSWORD }}    # cPanel FTP password
-          local-dir: ./dist/                       # built output folder
-          server-dir: /public_html/portal/         # subdomain root on cPanel
-          dangerous-clean-slate: false             # set true to wipe remote before upload
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./dist/
+          server-dir: /public_html/portal/
+          dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**
