@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the system with a specific role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Recruiter", "HiringManager"] },
+        "assignedJobs": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Client": {      "title": "Client",
+      "description": "A company that provides job openings.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Company name" },
+        "contactPerson": { "type": "string" },
+        "mobile": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "website": { "type": "string", "format": "uri" },
+        "logo": { "type": "string" },
+        "address": { "type": "string" },
+        "industry": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "contactPerson", "email", "address", "industry", "createdAt"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "A job opening posted by a client.",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "description": { "type": "string" },
+        "skillsRequired": { "type": "array", "items": { "type": "string" } },
+        "experienceRequired": { "type": "number" },
+        "salaryRange": { "type": "string" },
+        "openings": { "type": "number" },
+        "location": { "type": "string" },
+        "jobType": { "type": "string", "enum": ["Full-time", "Part-time", "Contract", "Internship"] },
+        "status": { "type": "string", "enum": ["Open", "Closed"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["clientId", "roleTitle", "skillsRequired", "experienceRequired", "location", "jobType", "status", "createdAt"]
+    },
+    "Candidate": {
+      "title": "Candidate",
+      "description": "A person looking for a job.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "experience": { "type": "number" },
+        "location": { "type": "string" },
+        "resumeUrl": { "type": "string" },
+        "source": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "parsedData": { "type": "object" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "email", "skills", "experience", "location", "createdAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Mapping between a candidate and a job.",
+      "type": "object",
+      "properties": {
+        "candidateId": { "type": "string" },
+        "jobId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Shortlisted", "Interview", "Offered", "Joined", "Dropped"] },
+        "notes": { "type": "string" },
+        "matchScore": { "type": "number" },
+        "interviewDetails": {
+          "type": "object",
+          "properties": {
+            "date": { "type": "string" },
+            "time": { "type": "string" },
+            "interviewer": { "type": "string" },
+            "location": { "type": "string" }
+          }
+        },
+        "updatedAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["candidateId", "jobId", "status", "updatedAt", "createdAt"]
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "An invitation for a user to join the system.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Admin", "Recruiter", "HiringManager"] },
+        "status": { "type": "string", "enum": ["Pending", "Accepted"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["email", "role", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "System users and their roles" },
+    "/invitations/{invitationId}": { "schema": "Invitation", "description": "Pending user invitations" },
+    "/clients/{clientId}": { "schema": "Client", "description": "Client companies" },
+    "/jobs/{jobId}": { "schema": "Job", "description": "Job openings" },
+    "/candidates/{candidateId}": { "schema": "Candidate", "description": "Candidate database" },
+    "/applications/{applicationId}": { "schema": "Application", "description": "Candidate-Job mapping" }
+  }
+}

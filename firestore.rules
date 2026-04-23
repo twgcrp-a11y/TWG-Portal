@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: clients
+    // Fields: name, contactPerson, mobile, email, website, logo, address, industry, notes, createdAt
+    //
+    // Collection: jobs
+    // Fields: clientId, clientName, roleTitle, description, skillsRequired, experienceRequired, salaryRange, openings, location, jobType, status, createdAt
+    //
+    // Collection: candidates
+    // Fields: name, phone, email, skills, experience, location, resumeUrl, source, tags, parsedData, createdAt
+    //
+    // Collection: applications
+    // Fields: candidateId, jobId, status, notes, matchScore, updatedAt, createdAt
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null ? userDoc.data.get('role', 'Unknown') : 'Unknown';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (getUserRole() == 'Admin' ||
+          (request.auth.token.email == "twgcrp@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isRecruiter() {
+      return isAuthenticated() && getUserRole() == 'Recruiter';
+    }
+
+    function isHiringManager() {
+      return isAuthenticated() && getUserRole() == 'HiringManager';
+    }
+
+    function isAssignedJob(jobId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null && jobId in userDoc.data.get('assignedJobs', []);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidClient(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.contactPerson is string && data.contactPerson.size() > 0 &&
+             isValidEmail(data.email) &&
+             data.createdAt is number;
+    }
+
+    function isValidJob(data) {
+      return data.clientId is string &&
+             data.roleTitle is string && data.roleTitle.size() > 0 &&
+             data.skillsRequired is list &&
+             data.experienceRequired is number &&
+             data.status in ['Open', 'Closed'] &&
+             data.jobType in ['Full-time', 'Part-time', 'Contract', 'Internship'];
+    }
+
+    function isValidCandidate(data) {
+      return data.name is string && data.name.size() > 0 &&
+             isValidEmail(data.email) &&
+             data.skills is list &&
+             data.experience is number &&
+             data.createdAt is number;
+    }
+
+    function isValidApplication(data) {
+      return data.candidateId is string &&
+             data.jobId is string &&
+             data.status in ['Shortlisted', 'Interview', 'Offered', 'Joined', 'Dropped'] &&
+             data.updatedAt is number &&
+             (!('interviewDetails' in data) || (
+               data.interviewDetails is map &&
+               data.interviewDetails.date is string &&
+               data.interviewDetails.time is string &&
+               data.interviewDetails.interviewer is string &&
+               data.interviewDetails.location is string
+             ));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isRecruiter());
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+        (
+          request.resource.data.role == 'Guest' || 
+          (request.auth.token.email == "twgcrp@gmail.com" && request.auth.token.email_verified == true) ||
+          (
+            exists(/databases/$(database)/documents/invitations/$(request.auth.token.email)) &&
+            get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.role == request.resource.data.role &&
+            get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.status == 'Pending'
+          )
+        );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter());
+      allow create, update: if (isAdmin() || isRecruiter()) && isValidClient(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter() || (isHiringManager() && isAssignedJob(jobId)));
+      allow create, update: if (isAdmin() || isRecruiter()) && isValidJob(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /candidates/{candidateId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter() || isHiringManager());
+      allow create, update: if (isAdmin() || isRecruiter()) && isValidCandidate(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter() || (isHiringManager() && isAssignedJob(resource.data.jobId)));
+      allow create: if (isAdmin() || isRecruiter()) && isValidApplication(request.resource.data);
+      allow update: if isAuthenticated() && (isAdmin() || isRecruiter() || (isHiringManager() && isAssignedJob(resource.data.jobId))) && isValidApplication(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (isAdmin() || request.auth.token.email == resource.data.email);
+      allow create: if isAdmin() && request.resource.data.email is string && request.resource.data.role in ['Admin', 'Recruiter', 'HiringManager'] && request.resource.data.status == 'Pending';
+      allow update: if isAuthenticated() && (isAdmin() || request.auth.token.email == resource.data.email) && request.resource.data.status in ['Pending', 'Accepted', 'Rejected'];
+      allow delete: if isAdmin();
+    }
+
+    match /screenings/{screeningId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter() || isHiringManager());
+      allow create, update: if isAuthenticated() && (isAdmin() || isRecruiter());
+      allow delete: if isAdmin();
+    }
+
+    match /activityLogs/{logId} {
+      allow read: if isAuthenticated() && (isAdmin() || isRecruiter() || isHiringManager());
+      allow create: if isAuthenticated() && 
+                    request.resource.data.candidateId is string &&
+                    request.resource.data.action is string &&
+                    request.resource.data.timestamp is number;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
+
