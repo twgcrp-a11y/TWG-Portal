@@ -177,18 +177,25 @@ export default function TWGMonitoringApp() {
   // ── Derived ────────────────────────────────────────────────────────────────
   const revenueTeam     = team.filter(t=>t.name!=='Wahed');
   const totalTarget     = revenueTeam.reduce((a,b)=>a+b.target,0);
-  const totalActual     = revenueTeam.reduce((a,b)=>a+safeParse(b.actual),0);
+  // Actual = sum of all daily log 'sales' entries for current month (auto-calculated)
+  const currentMonthPrefix = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  const calcActualForMember = (name) => dailyLog
+    .filter(e => e.member === name && e.date.startsWith(currentMonthPrefix))
+    .reduce((a, e) => a + safeParse(e.sales ?? e.revenue ?? 0), 0);
+  const totalActual = revenueTeam.reduce((a, m) => a + calcActualForMember(m.name), 0);
+  // Build team with auto-calculated actuals for % and bonus calculations
+  const teamWithActuals = revenueTeam.map(m => ({ ...m, actual: calcActualForMember(m.name) }));
   const totalAdmissions = Object.values(admissions).reduce((a,b)=>a+safeParse(b),0);
   const revenuePct      = Math.min(Math.round((totalActual/(totalTarget||1))*100),100);
   const deliveryPct     = Math.min(Math.round((totalAdmissions/TOTAL_DEL_TARGET)*100),100);
-  const memberBonuses   = revenueTeam.map(m=>{ const pct=Math.round((safeParse(m.actual)/(m.target||1))*100); return {...m,pct,bonus:getMemberBonus(pct)}; });
+  const memberBonuses   = teamWithActuals.map(m=>{ const pct=Math.round((safeParse(m.actual)/(m.target||1))*100); return {...m,pct,bonus:getMemberBonus(pct)}; });
   const salesBonus      = memberBonuses.reduce((a,m)=>a+m.bonus,0);
   const leaderBonus     = getLeaderBonus(revenuePct);
   const delivBonus      = getDeliveryTier(deliveryPct);
   const actScore        = name => { const a=activities[name]||{}; return safeParse(a.calls)+safeParse(a.meetings)*3+safeParse(a.leads)*5+safeParse(a.closures)*10; };
 
   const myMember = revenueTeam.find(m=>m.name===access.teamName);
-  const myActual = myMember?safeParse(myMember.actual):0;
+  const myActual = myMember ? calcActualForMember(myMember.name) : 0;
   const myTarget = myMember?myMember.target:1;
   const myPct    = Math.min(Math.round((myActual/myTarget)*100),100);
   const myBonus  = getMemberBonus(myPct);
@@ -199,7 +206,7 @@ export default function TWGMonitoringApp() {
       lowestActivity:[...scored].sort((a,b)=>a.score-b.score)[0],
       highestCaller: [...scored].sort((a,b)=>b.calls-a.calls)[0],
       bestConverter: [...memberBonuses].sort((a,b)=>b.pct-a.pct)[0],
-      pendingUpdates:revenueTeam.filter(m=>safeParse(m.actual)===0).map(m=>m.name),
+      pendingUpdates:revenueTeam.filter(m=>calcActualForMember(m.name)===0).map(m=>m.name),
     };
   })();
 
@@ -385,7 +392,7 @@ export default function TWGMonitoringApp() {
   // ── MemberCard ─────────────────────────────────────────────────────────────
   const MemberCard=({m})=>{
     const canEdit=canEditMember(m.name);
-    const pct=Math.min(Math.round((safeParse(m.actual)/(m.target||1))*100),100);
+    const pct=Math.min(Math.round((calcActualForMember(m.name)/(m.target||1))*100),100);
     return (
       <div className={`border rounded-xl p-3 space-y-2 hover:shadow-sm transition-shadow ${canEdit?'border-gray-200 bg-white':'border-gray-100 bg-gray-50/50'}`}>
         <div className='flex items-start justify-between gap-2'>
@@ -397,7 +404,9 @@ export default function TWGMonitoringApp() {
             {(access.isCEO&&editTargets)?<Input type='number' value={m.target} onChange={e=>updateTarget(m.name,e.target.value)} className='h-8 text-sm'/>:<div className='text-sm font-medium'>{m.target}L</div>}
           </div>
           <div><label className='text-xs text-gray-400 block'>Actual (₹K)</label>
-            <LockedInput canEdit={canEdit} type='number' value={m.actual} onChange={e=>updateActual(m.name,e.target.value)} className='h-8 text-sm'/>
+            <div className='text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2'>
+              ₹{fmt(calcActualForMember(m.name))}K <span className='text-xs font-normal text-blue-500'>auto from daily log</span>
+            </div>
           </div>
         </div>
         <div className={`text-xs font-medium text-center py-1 rounded-lg border ${pctBg(pct)}`}>
@@ -709,7 +718,7 @@ export default function TWGMonitoringApp() {
                 <div className='overflow-x-auto'>
                   <table className='w-full text-sm'>
                     <thead><tr className='border-b text-xs text-gray-500'>
-                      {['Member','Days Logged','Calls','Meetings','Leads','Closures','Order Intake','Sales'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}
+                      {['Member','Days Logged','Calls','Meetings','Leads','Closures','Order Intake (₹K)','Sales → Monthly Actual (₹K)'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {dailyTotals.map(t=>(
@@ -822,7 +831,10 @@ export default function TWGMonitoringApp() {
           {activeTab==='team'&&<div className='space-y-4'>
             <div className='flex justify-between items-center'>
               <p className='text-sm text-gray-500'>{access.isCEO?'Full visibility. All rows editable.':`Editable: ${access.canEdit.join(', ')}`}</p>
-              {access.isCEO&&<Button variant='outline' onClick={()=>setEditTargets(!editTargets)} className='text-xs h-8'>{editTargets?'✓ Lock Targets':'✏️ Edit Targets'}</Button>}
+              <div className='flex items-center gap-3'>
+                <span className='text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-3 py-1'>📅 Actuals auto-calculated from Daily Log</span>
+                {access.isCEO&&<Button variant='outline' onClick={()=>setEditTargets(!editTargets)} className='text-xs h-8'>{editTargets?'✓ Lock Targets':'✏️ Edit Targets'}</Button>}
+              </div>
             </div>
             <div className='grid lg:grid-cols-3 gap-4'>
               <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🏢 Central Sales</h3>{revenueTeam.slice(0,2).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
@@ -847,7 +859,7 @@ export default function TWGMonitoringApp() {
           {activeTab==='reports'&&<div className='space-y-4'>
             <div className='flex justify-between items-center'>
               <h3 className='font-bold text-gray-700'>{access.isCEO?'Full Team Report':'My Report'} — {period} / {month}</h3>
-              <Button variant='outline' className='text-xs h-8' onClick={()=>exportCSV(memberBonuses.filter(m=>access.isCEO||access.canEdit.includes(m.name)).map(m=>({Name:m.name,Role:m.role,Target:m.target,Actual:m.actual,Percent:m.pct,ActivityScore:actScore(m.name),Bonus:m.bonus})),`TWG_Report_${month}.csv`)}>⬇ Export CSV</Button>
+              <Button variant='outline' className='text-xs h-8' onClick={()=>exportCSV(memberBonuses.filter(m=>access.isCEO||access.canEdit.includes(m.name)).map(m=>({Name:m.name,Role:m.role,Target:m.target,Actual_K:calcActualForMember(m.name),Percent:m.pct,ActivityScore:actScore(m.name),Bonus:m.bonus})),`TWG_Report_${month}.csv`)}>⬇ Export CSV</Button>
             </div>
             <Card><CardContent className='p-0 overflow-x-auto'>
               <table className='w-full text-sm'>
@@ -858,7 +870,7 @@ export default function TWGMonitoringApp() {
                       <td className='px-4 py-3 font-medium'>{m.name}</td>
                       <td className='px-4 py-3 text-gray-500 text-xs'>{m.role}</td>
                       <td className='px-4 py-3'>{m.target}L</td>
-                      <td className='px-4 py-3 font-semibold'>₹{m.actual}K</td>
+                      <td className='px-4 py-3 font-semibold'>₹{fmt(calcActualForMember(m.name))}K</td>
                       <td className={`px-4 py-3 font-bold ${pctColor(m.pct)}`}>{m.pct}%</td>
                       <td className='px-4 py-3 text-blue-600'>{actScore(m.name)}</td>
                       {access.isCEO&&<td className='px-4 py-3 text-green-600 font-medium'>₹{fmt(m.bonus)}</td>}
