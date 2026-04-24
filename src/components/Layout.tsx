@@ -30,7 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: Users, label: 'Clients', href: '/clients' },
   { icon: Briefcase, label: 'Job Openings', href: '/jobs' },
   { icon: UserCircle, label: 'Candidates', href: '/candidates' },
