@@ -30,9 +30,9 @@ const TODAY = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 const seed = [
   { name: "Abdullah Qidvai + CA's BD Team", role: 'Central Sales Team',       target: 15, actual: 0 },
   { name: 'Abdullah Qidvai',                role: 'Talent Acquisition',        target: 3,  actual: 0 },
-  { name: 'Munawar',                        role: 'Direct Hiring',             target: 3,  actual: 0 },
-  { name: 'Tameem',                         role: 'BL Head - GDC Development', target: 3,  actual: 0 },
-  { name: 'Muzamil',                        role: 'BL Head - Academic Wing',   target: 3,  actual: 0 },
+  { name: 'Tameem', role: 'BL Head - GDC Development', target: 3, actual: 0 },
+  { name: 'Muzamil', role: 'BL Head - Academic Wing', target: 3, actual: 0 },
+  { name: 'Munawar', role: 'Direct Hiring', target: 3, actual: 0 },
   { name: 'Wahed',                          role: 'Delivery Operations Head',  target: TOTAL_DEL_TARGET, actual: 0 },
 ];
 
@@ -723,8 +723,8 @@ export default function TWGMonitoringApp() {
               {access.isCEO&&<Button variant='outline' onClick={()=>setEditTargets(!editTargets)} className='text-xs h-8'>{editTargets?'✓ Lock Targets':'✏️ Edit Targets'}</Button>}
             </div>
             <div className='grid lg:grid-cols-3 gap-4'>
-              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🏢 Central Sales</h3>{revenueTeam.slice(0,3).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
-              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🎯 BL Heads</h3>{revenueTeam.slice(3,5).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
+              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🏢 Central Sales</h3>{revenueTeam.slice(0,2).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
+              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🎯 BL Heads</h3>{revenueTeam.slice(2,5).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
               <Card><CardContent className='p-4 space-y-2'>
                 <h3 className='font-bold text-red-700'>🏭 Delivery</h3>
                 {!access.isCEO&&<div className='text-xs text-gray-400 bg-gray-50 rounded-lg p-2'>🔒 Managed by Wahed</div>}
