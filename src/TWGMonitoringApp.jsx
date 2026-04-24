@@ -186,9 +186,9 @@ export default function TWGMonitoringApp() {
   // Build team with auto-calculated actuals for % and bonus calculations
   const teamWithActuals = revenueTeam.map(m => ({ ...m, actual: calcActualForMember(m.name) }));
   const totalAdmissions = Object.values(admissions).reduce((a,b)=>a+safeParse(b),0);
-  const revenuePct      = Math.min(Math.round((totalActual/(totalTarget||1))*100),100);
+  const revenuePct      = Math.min(Math.round((totalActual/((totalTarget*1000)||1))*100),100); // target L×1000 → K
   const deliveryPct     = Math.min(Math.round((totalAdmissions/TOTAL_DEL_TARGET)*100),100);
-  const memberBonuses   = teamWithActuals.map(m=>{ const pct=Math.round((safeParse(m.actual)/(m.target||1))*100); return {...m,pct,bonus:getMemberBonus(pct)}; });
+  const memberBonuses   = teamWithActuals.map(m=>{ const pct=Math.round((safeParse(m.actual)/((m.target*1000)||1))*100); return {...m,pct,bonus:getMemberBonus(pct)}; }); // target L×1000 → K
   const salesBonus      = memberBonuses.reduce((a,m)=>a+m.bonus,0);
   const leaderBonus     = getLeaderBonus(revenuePct);
   const delivBonus      = getDeliveryTier(deliveryPct);
@@ -197,7 +197,7 @@ export default function TWGMonitoringApp() {
   const myMember = revenueTeam.find(m=>m.name===access.teamName);
   const myActual = myMember ? calcActualForMember(myMember.name) : 0;
   const myTarget = myMember?myMember.target:1;
-  const myPct    = Math.min(Math.round((myActual/myTarget)*100),100);
+  const myPct    = Math.min(Math.round((myActual/(myTarget*1000||1))*100),100); // target L×1000 → K
   const myBonus  = getMemberBonus(myPct);
 
   const reviewStats = (()=>{
@@ -392,7 +392,7 @@ export default function TWGMonitoringApp() {
   // ── MemberCard ─────────────────────────────────────────────────────────────
   const MemberCard=({m})=>{
     const canEdit=canEditMember(m.name);
-    const pct=Math.min(Math.round((calcActualForMember(m.name)/(m.target||1))*100),100);
+    const pct=Math.min(Math.round((calcActualForMember(m.name)/((m.target*1000)||1))*100),100); // target L×1000 → K
     return (
       <div className={`border rounded-xl p-3 space-y-2 hover:shadow-sm transition-shadow ${canEdit?'border-gray-200 bg-white':'border-gray-100 bg-gray-50/50'}`}>
         <div className='flex items-start justify-between gap-2'>
