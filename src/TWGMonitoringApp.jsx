@@ -166,6 +166,7 @@ export default function TWGMonitoringApp() {
   const [activeTab,    setActiveTab]    = useState('dashboard');
   const [confirmReset, setConfirmReset] = useState(false);
   const [editTargets,  setEditTargets]  = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);  // { id, fields }
   const hasLoaded  = useRef(false);
   const sessionRef = useRef(null);
 
@@ -341,6 +342,38 @@ export default function TWGMonitoringApp() {
     setDailyLog(prev=>prev.filter(e=>e.id!==id));
     await api.deleteLog(id);
     toast('Entry deleted');
+  };
+
+  const startEditEntry = (e) => {
+    // Allow CEO to edit any entry, others only their own
+    if (!access.isCEO && e.member !== access.teamName) { toast('You can only edit your own entries','error'); return; }
+    setEditingEntry({
+      id: e.id,
+      calls:       String(e.calls ?? 0),
+      meetings:    String(e.meetings ?? 0),
+      leads:       String(e.leads ?? 0),
+      closures:    String(e.closures ?? 0),
+      orderIntake: String(e.orderIntake ?? e.collection ?? 0),
+      sales:       String(e.sales ?? e.revenue ?? 0),
+    });
+  };
+
+  const saveEditedEntry = async () => {
+    const updated = {
+      ...editingEntry,
+      calls:       safeParse(editingEntry.calls),
+      meetings:    safeParse(editingEntry.meetings),
+      leads:       safeParse(editingEntry.leads),
+      closures:    safeParse(editingEntry.closures),
+      orderIntake: safeParse(editingEntry.orderIntake),
+      sales:       safeParse(editingEntry.sales),
+    };
+    const newLog = dailyLog.map(e => e.id === updated.id ? { ...e, ...updated } : e);
+    setDailyLog(newLog);
+    setEditingEntry(null);
+    const ok = await api.save({ user: currentUser, team, admissions, dailyLog: newLog, month, period });
+    if (ok) toast('Entry updated ✓');
+    else    toast('Updated locally — will sync on next save', 'error');
   };
 
   const updateActual    = (name,val) => { if(!canEditMember(name))return; setTeam(p=>p.map(m=>m.name===name?{...m,actual:safeParse(val)}:m)); };
@@ -718,26 +751,68 @@ export default function TWGMonitoringApp() {
                 <div className='text-center py-8 text-gray-400 text-sm'>No entries yet. Submit your first daily log above ☝️</div>
               ):(
                 <div className='space-y-2 max-h-96 overflow-y-auto'>
-                  {sortedLog.map(e=>(
-                    <div key={e.id} className='border rounded-xl p-3 hover:bg-gray-50 transition-colors'>
+                  {sortedLog.map(e=>{
+                    const isEditing = editingEntry?.id === e.id;
+                    const canEdit   = access.isCEO || e.member === access.teamName;
+                    return (
+                    <div key={e.id} className={`border rounded-xl p-3 transition-colors ${isEditing?'border-blue-300 bg-blue-50/40':'hover:bg-gray-50'}`}>
+                      {/* Header row */}
                       <div className='flex justify-between items-start mb-2'>
                         <div>
                           <span className='font-semibold text-sm'>{e.member}</span>
                           <span className='text-xs text-gray-400 ml-2'>{fmtDate(e.date)}</span>
                           {e.date===TODAY()&&<span className='ml-2 text-xs bg-blue-100 text-blue-600 rounded-full px-2 py-0.5'>Today</span>}
                         </div>
-                        {access.isCEO&&<button onClick={()=>deleteDailyEntry(e.id)} className='text-xs text-red-400 hover:text-red-600'>✕</button>}
+                        <div className='flex gap-2'>
+                          {canEdit && !isEditing && (
+                            <button onClick={()=>startEditEntry(e)} className='text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-50'>✏️ Edit</button>
+                          )}
+                          {access.isCEO && !isEditing && (
+                            <button onClick={()=>deleteDailyEntry(e.id)} className='text-xs text-red-400 hover:text-red-600'>✕</button>
+                          )}
+                        </div>
                       </div>
-                      <div className='grid grid-cols-3 md:grid-cols-6 gap-2 text-sm'>
-                        <div><div className='text-xs text-gray-400'>Calls</div><div className='font-semibold'>{e.calls}</div></div>
-                        <div><div className='text-xs text-gray-400'>Meetings</div><div className='font-semibold'>{e.meetings}</div></div>
-                        <div><div className='text-xs text-gray-400'>Leads</div><div className='font-semibold'>{e.leads}</div></div>
-                        <div><div className='text-xs text-gray-400'>Closures</div><div className='font-semibold'>{e.closures}</div></div>
-                        <div><div className='text-xs text-gray-400'>Order Intake</div><div className='font-semibold'>₹{fmt(e.orderIntake??e.collection??0)}K</div></div>
-                        <div><div className='text-xs text-gray-400'>Sales</div><div className='font-semibold text-green-600'>₹{fmt(e.sales??e.revenue??0)}K</div></div>
-                      </div>
+
+                      {/* View mode */}
+                      {!isEditing && (
+                        <div className='grid grid-cols-3 md:grid-cols-6 gap-2 text-sm'>
+                          <div><div className='text-xs text-gray-400'>Calls</div><div className='font-semibold'>{e.calls}</div></div>
+                          <div><div className='text-xs text-gray-400'>Meetings</div><div className='font-semibold'>{e.meetings}</div></div>
+                          <div><div className='text-xs text-gray-400'>Leads</div><div className='font-semibold'>{e.leads}</div></div>
+                          <div><div className='text-xs text-gray-400'>Closures</div><div className='font-semibold'>{e.closures}</div></div>
+                          <div><div className='text-xs text-gray-400'>Order Intake</div><div className='font-semibold'>₹{fmt(e.orderIntake??e.collection??0)}K</div></div>
+                          <div><div className='text-xs text-gray-400'>Sales</div><div className='font-semibold text-green-600'>₹{fmt(e.sales??e.revenue??0)}K</div></div>
+                        </div>
+                      )}
+
+                      {/* Edit mode — inline form */}
+                      {isEditing && (
+                        <div className='space-y-3'>
+                          <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
+                            {[
+                              {key:'calls',       label:'📞 Calls'},
+                              {key:'meetings',    label:'🤝 Meetings'},
+                              {key:'leads',       label:'🎯 Leads'},
+                              {key:'closures',    label:'✅ Closures'},
+                              {key:'orderIntake', label:'📋 Order Intake (₹K)'},
+                              {key:'sales',       label:'💰 Sales (₹K)'},
+                            ].map(({key,label})=>(
+                              <div key={key}>
+                                <label className='text-xs text-gray-500 block mb-0.5'>{label}</label>
+                                <Input type='number' value={editingEntry[key]}
+                                  onChange={ev=>setEditingEntry(p=>({...p,[key]:ev.target.value}))}
+                                  className='h-8 text-sm bg-white'/>
+                              </div>
+                            ))}
+                          </div>
+                          <div className='flex gap-2'>
+                            <Button onClick={saveEditedEntry} className='h-8 text-xs bg-blue-700 hover:bg-blue-800'>Save Changes</Button>
+                            <Button variant='outline' onClick={()=>setEditingEntry(null)} className='h-8 text-xs'>Cancel</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  );})}
                 </div>
               )}
             </CardContent></Card>
