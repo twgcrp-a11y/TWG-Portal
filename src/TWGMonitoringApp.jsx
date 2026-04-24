@@ -396,7 +396,7 @@ export default function TWGMonitoringApp() {
           <div><label className='text-xs text-gray-400 block'>Target (L)</label>
             {(access.isCEO&&editTargets)?<Input type='number' value={m.target} onChange={e=>updateTarget(m.name,e.target.value)} className='h-8 text-sm'/>:<div className='text-sm font-medium'>{m.target}L</div>}
           </div>
-          <div><label className='text-xs text-gray-400 block'>Actual (L)</label>
+          <div><label className='text-xs text-gray-400 block'>Actual (₹K)</label>
             <LockedInput canEdit={canEdit} type='number' value={m.actual} onChange={e=>updateActual(m.name,e.target.value)} className='h-8 text-sm'/>
           </div>
         </div>
@@ -559,7 +559,7 @@ export default function TWGMonitoringApp() {
             {access.isCEO?(
               <>
                 <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                  <KpiCard label='Total Revenue' value={`${totalActual}L`} pct={revenuePct} sub={`${revenuePct}% of ${totalTarget}L`}/>
+                  <KpiCard label='Total Revenue' value={`₹${totalActual}K`} pct={revenuePct} sub={`${revenuePct}% of ${totalTarget}L`}/>
                   <KpiCard label='Admissions' value={totalAdmissions} pct={deliveryPct} sub={`${deliveryPct}% of ${TOTAL_DEL_TARGET}`}/>
                   <KpiCard label='Bonus Cost' value={`₹${fmt(salesBonus+leaderBonus)}`} color='text-green-600'/>
                   <KpiCard label="Today's Logs" value={dailyLog.filter(e=>e.date===TODAY()).length} color='text-blue-600' sub={`of ${revenueTeam.length} members`}/>
@@ -611,7 +611,7 @@ export default function TWGMonitoringApp() {
               <div className='space-y-4'>
                 <div className='text-sm font-medium text-gray-500'>Your Performance — {month} ({period})</div>
                 <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                  <KpiCard label='My Revenue' value={`${myActual}L`} pct={myPct} sub={`${myPct}% of ${myTarget}L`}/>
+                  <KpiCard label='My Revenue' value={`₹${myActual}K`} pct={myPct} sub={`${myPct}% of ${myTarget}L`}/>
                   <KpiCard label='My Bonus' value={`₹${fmt(myBonus)}`} color='text-green-600' sub={getBonusTierLabel(myPct)}/>
                   <KpiCard label='Activity Score' value={myMember?actScore(myMember.name):0} color='text-blue-600'/>
                   <KpiCard label='Status' value={myPct>=100?'🎯 Target Hit':myPct>=70?'✅ On Track':'⚠️ Below Target'} color={myPct>=70?'text-green-600':'text-red-600'}/>
@@ -640,7 +640,7 @@ export default function TWGMonitoringApp() {
                 <Card><CardContent className='p-4'>
                   <div className='text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3'>Team Overview (totals only)</div>
                   <div className='grid grid-cols-3 gap-4 text-center'>
-                    <div><div className='text-xl font-bold text-red-700'>{totalActual}L</div><div className='text-xs text-gray-400'>Team Revenue</div></div>
+                    <div><div className='text-xl font-bold text-red-700'>₹{totalActual}K</div><div className='text-xs text-gray-400'>Team Revenue</div></div>
                     <div><div className='text-xl font-bold'>{totalTarget}L</div><div className='text-xs text-gray-400'>Team Target</div></div>
                     <div><div className={`text-xl font-bold ${pctColor(revenuePct)}`}>{revenuePct}%</div><div className='text-xs text-gray-400'>Progress</div></div>
                   </div>
@@ -858,7 +858,7 @@ export default function TWGMonitoringApp() {
                       <td className='px-4 py-3 font-medium'>{m.name}</td>
                       <td className='px-4 py-3 text-gray-500 text-xs'>{m.role}</td>
                       <td className='px-4 py-3'>{m.target}L</td>
-                      <td className='px-4 py-3 font-semibold'>{m.actual}L</td>
+                      <td className='px-4 py-3 font-semibold'>₹{m.actual}K</td>
                       <td className={`px-4 py-3 font-bold ${pctColor(m.pct)}`}>{m.pct}%</td>
                       <td className='px-4 py-3 text-blue-600'>{actScore(m.name)}</td>
                       {access.isCEO&&<td className='px-4 py-3 text-green-600 font-medium'>₹{fmt(m.bonus)}</td>}
@@ -873,7 +873,7 @@ export default function TWGMonitoringApp() {
           {/* ── ANALYSIS ── */}
           {activeTab==='analysis'&&canSeeTab('analysis')&&<div className='space-y-4'>
             <div className='grid md:grid-cols-2 gap-4'>
-              <KpiCard label='Sales Performance' value={`${revenuePct}%`} pct={revenuePct} sub={`${totalActual}L of ${totalTarget}L`}/>
+              <KpiCard label='Sales Performance' value={`${revenuePct}%`} pct={revenuePct} sub={`₹${totalActual}K of ${totalTarget}L`}/>
               <KpiCard label='Delivery Performance' value={`${deliveryPct}%`} pct={deliveryPct} sub={`${totalAdmissions} of ${TOTAL_DEL_TARGET}`}/>
             </div>
             <Card><CardContent className='p-4'>
@@ -886,7 +886,7 @@ export default function TWGMonitoringApp() {
               <h3 className='font-bold text-gray-700 mb-3'>Monthly History</h3>
               <table className='w-full text-sm'>
                 <thead><tr className='border-b text-xs text-gray-500'><th className='text-left py-2'>Month</th><th>Revenue</th><th>Rev%</th><th>Admissions</th><th>Del%</th></tr></thead>
-                <tbody>{[...history].reverse().map((h,i)=><tr key={i} className='border-b hover:bg-gray-50'><td className='py-2 font-medium'>{h.month}</td><td className='py-2 text-center'>{h.totalActual}L</td><td className={`py-2 text-center font-bold ${pctColor(h.revenuePct)}`}>{h.revenuePct}%</td><td className='py-2 text-center'>{h.totalAdmissions}</td><td className={`py-2 text-center font-bold ${pctColor(h.deliveryPct)}`}>{h.deliveryPct}%</td></tr>)}</tbody>
+                <tbody>{[...history].reverse().map((h,i)=><tr key={i} className='border-b hover:bg-gray-50'><td className='py-2 font-medium'>{h.month}</td><td className='py-2 text-center'>₹{h.totalActual}K</td><td className={`py-2 text-center font-bold ${pctColor(h.revenuePct)}`}>{h.revenuePct}%</td><td className='py-2 text-center'>{h.totalAdmissions}</td><td className={`py-2 text-center font-bold ${pctColor(h.deliveryPct)}`}>{h.deliveryPct}%</td></tr>)}</tbody>
               </table>
             </CardContent></Card>}
           </div>}
@@ -914,7 +914,7 @@ export default function TWGMonitoringApp() {
           {/* ── CEO ── */}
           {activeTab==='ceo'&&canSeeTab('ceo')&&<div className='space-y-4'>
             <div className='grid md:grid-cols-4 gap-4'>
-              <KpiCard label='Revenue' value={`${totalActual}L`} pct={revenuePct} sub={`${revenuePct}% of ${totalTarget}L`}/>
+              <KpiCard label='Revenue' value={`₹${totalActual}K`} pct={revenuePct} sub={`${revenuePct}% of ${totalTarget}L`}/>
               <KpiCard label='Admissions' value={totalAdmissions} pct={deliveryPct} sub={`${deliveryPct}% of ${TOTAL_DEL_TARGET}`}/>
               <KpiCard label='Bonus Cost' value={`₹${fmt(salesBonus+leaderBonus)}`} color='text-green-600'/>
               <KpiCard label='Daily Logs Today' value={`${dailyLog.filter(e=>e.date===TODAY()).length}/${revenueTeam.length}`} color='text-blue-600'/>
