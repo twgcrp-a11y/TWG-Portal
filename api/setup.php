@@ -37,8 +37,8 @@ try {
         meetings     INT DEFAULT 0,
         leads        INT DEFAULT 0,
         closures     INT DEFAULT 0,
-        collection   DECIMAL(12,2) DEFAULT 0,
-        revenue      DECIMAL(10,2) DEFAULT 0,
+        order_intake DECIMAL(12,2) DEFAULT 0,
+        sales        DECIMAL(10,2) DEFAULT 0,
         submitted_by VARCHAR(50),
         submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");

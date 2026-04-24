@@ -37,7 +37,7 @@ const seed = [
   { name: 'Wahed',                          role: 'Delivery Operations Head',  target: TOTAL_DEL_TARGET, actual: 0 },
 ];
 
-const EMPTY_DAILY = () => ({ calls:'', meetings:'', leads:'', closures:'', collection:'', revenue:'' });
+const EMPTY_DAILY = () => ({ calls:'', meetings:'', leads:'', closures:'', orderIntake:'', sales:'' });
 const makeEmptyActivities = () =>
   Object.fromEntries(seed.filter(s => s.name !== 'Wahed').map(s => [s.name, EMPTY_DAILY()]));
 
@@ -225,7 +225,8 @@ export default function TWGMonitoringApp() {
       meetings: entries.reduce((a,e)=>a+safeParse(e.meetings),0),
       leads:    entries.reduce((a,e)=>a+safeParse(e.leads),0),
       closures: entries.reduce((a,e)=>a+safeParse(e.closures),0),
-      revenue:  entries.reduce((a,e)=>a+safeParse(e.revenue),0),
+      orderIntake: entries.reduce((a,e)=>a+safeParse(e.orderIntake),0),
+      sales:    entries.reduce((a,e)=>a+safeParse(e.sales),0),
       days:     entries.length,
     };
   });
@@ -321,8 +322,8 @@ export default function TWGMonitoringApp() {
       meetings:    safeParse(dailyForm.meetings),
       leads:       safeParse(dailyForm.leads),
       closures:    safeParse(dailyForm.closures),
-      collection:  safeParse(dailyForm.collection),
-      revenue:     safeParse(dailyForm.revenue),
+      orderIntake: safeParse(dailyForm.orderIntake),
+      sales:       safeParse(dailyForm.sales),
       submittedAt: new Date().toISOString(),
       submittedBy: currentUser,
     };
@@ -535,7 +536,7 @@ export default function TWGMonitoringApp() {
                   <h3 className='font-bold text-gray-700 mb-3'>📅 Today's Activity Summary — {fmtDate(TODAY())}</h3>
                   <div className='overflow-x-auto'>
                     <table className='w-full text-sm'>
-                      <thead><tr className='border-b text-xs text-gray-500'>{['Member','Calls','Meetings','Leads','Closures','Revenue','Submitted'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}</tr></thead>
+                      <thead><tr className='border-b text-xs text-gray-500'>{['Member','Calls','Meetings','Leads','Closures','Order Intake','Sales','Submitted'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}</tr></thead>
                       <tbody>
                         {revenueTeam.map(m=>{
                           const e=dailyLog.find(l=>l.member===m.name&&l.date===TODAY());
@@ -546,7 +547,8 @@ export default function TWGMonitoringApp() {
                               <td className='py-2 px-2'>{e?e.meetings:'—'}</td>
                               <td className='py-2 px-2'>{e?e.leads:'—'}</td>
                               <td className='py-2 px-2'>{e?e.closures:'—'}</td>
-                              <td className='py-2 px-2'>{e?`₹${fmt(e.revenue)}`:'—'}</td>
+                              <td className='py-2 px-2'>{e?`₹${fmt(e.orderIntake)}K`:'—'}</td>
+                              <td className='py-2 px-2'>{e?`₹${fmt(e.sales)}K`:'—'}</td>
                               <td className='py-2 px-2'>{e?<span className='text-green-600 text-xs font-medium'>✓ Done</span>:<span className='text-red-400 text-xs'>Pending</span>}</td>
                             </tr>
                           );
@@ -595,7 +597,7 @@ export default function TWGMonitoringApp() {
                             <div><div className='text-xs text-gray-400'>Meetings</div><div className='font-medium'>{e.meetings}</div></div>
                             <div><div className='text-xs text-gray-400'>Leads</div><div className='font-medium'>{e.leads}</div></div>
                             <div><div className='text-xs text-gray-400'>Closures</div><div className='font-medium'>{e.closures}</div></div>
-                            <div><div className='text-xs text-gray-400'>Revenue</div><div className='font-medium text-green-600'>₹{fmt(e.revenue)}</div></div>
+                            <div><div className='text-xs text-gray-400'>Revenue</div><div className='font-medium text-green-600'>₹{fmt(e.sales)}</div></div>
                           </div>
                         ))}
                       </div>
@@ -651,8 +653,8 @@ export default function TWGMonitoringApp() {
                     {key:'meetings',   label:'🤝 Meetings Done',   placeholder:'0'},
                     {key:'leads',      label:'🎯 Leads Generated', placeholder:'0'},
                     {key:'closures',   label:'✅ Closures',         placeholder:'0'},
-                    {key:'collection', label:'💳 Collection (₹)',  placeholder:'0'},
-                    {key:'revenue',    label:'💰 Revenue (K)',      placeholder:'0'},
+                    {key:'orderIntake', label:'📋 Order Intake (₹K)', placeholder:'0'},
+                    {key:'sales',      label:'💰 Sales (₹K)',        placeholder:'0'},
                   ].map(({key,label,placeholder})=>(
                     <div key={key}>
                       <label className='text-xs font-medium text-gray-600 mb-1 block'>{label}</label>
@@ -674,7 +676,7 @@ export default function TWGMonitoringApp() {
                 <div className='overflow-x-auto'>
                   <table className='w-full text-sm'>
                     <thead><tr className='border-b text-xs text-gray-500'>
-                      {['Member','Days Logged','Calls','Meetings','Leads','Closures','Revenue'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}
+                      {['Member','Days Logged','Calls','Meetings','Leads','Closures','Order Intake','Sales'].map(h=><th key={h} className='text-left py-2 px-2 font-semibold'>{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {dailyTotals.map(t=>(
@@ -685,7 +687,8 @@ export default function TWGMonitoringApp() {
                           <td className='py-2 px-2 text-center'>{t.meetings}</td>
                           <td className='py-2 px-2 text-center'>{t.leads}</td>
                           <td className='py-2 px-2 text-center'>{t.closures}</td>
-                          <td className='py-2 px-2 text-center text-green-600 font-medium'>₹{fmt(t.revenue)}</td>
+                          <td className='py-2 px-2 text-center'>₹{fmt(t.orderIntake)}K</td>
+                          <td className='py-2 px-2 text-center text-green-600 font-medium'>₹{fmt(t.sales)}K</td>
                         </tr>
                       ))}
                     </tbody>
@@ -708,7 +711,7 @@ export default function TWGMonitoringApp() {
                       </SelectContent>
                     </Select>
                   )}
-                  <Button variant='outline' className='h-8 text-xs' onClick={()=>exportCSV(sortedLog.map(e=>({Date:fmtDate(e.date),Member:e.member,Calls:e.calls,Meetings:e.meetings,Leads:e.leads,Closures:e.closures,Collection:e.collection,Revenue_K:e.revenue,SubmittedAt:e.submittedAt})),'TWG_Daily_Log.csv')}>⬇ Export CSV</Button>
+                  <Button variant='outline' className='h-8 text-xs' onClick={()=>exportCSV(sortedLog.map(e=>({Date:fmtDate(e.date),Member:e.member,Calls:e.calls,Meetings:e.meetings,Leads:e.leads,Closures:e.closures,OrderIntake_K:e.orderIntake,Sales_K:e.sales,SubmittedAt:e.submittedAt})),'TWG_Daily_Log.csv')}>⬇ Export CSV</Button>
                 </div>
               </div>
               {sortedLog.length===0?(
@@ -730,8 +733,8 @@ export default function TWGMonitoringApp() {
                         <div><div className='text-xs text-gray-400'>Meetings</div><div className='font-semibold'>{e.meetings}</div></div>
                         <div><div className='text-xs text-gray-400'>Leads</div><div className='font-semibold'>{e.leads}</div></div>
                         <div><div className='text-xs text-gray-400'>Closures</div><div className='font-semibold'>{e.closures}</div></div>
-                        <div><div className='text-xs text-gray-400'>Collection</div><div className='font-semibold'>₹{fmt(e.collection)}</div></div>
-                        <div><div className='text-xs text-gray-400'>Revenue</div><div className='font-semibold text-green-600'>₹{fmt(e.revenue)}K</div></div>
+                        <div><div className='text-xs text-gray-400'>Order Intake</div><div className='font-semibold'>₹{fmt(e.orderIntake)}K</div></div>
+                        <div><div className='text-xs text-gray-400'>Sales</div><div className='font-semibold text-green-600'>₹{fmt(e.sales)}K</div></div>
                       </div>
                     </div>
                   ))}
@@ -863,7 +866,7 @@ export default function TWGMonitoringApp() {
               </CardContent></Card>
               <Card><CardContent className='p-4 space-y-3'>
                 <h3 className='font-bold text-red-700'>📤 Export</h3>
-                <Button className='w-full bg-red-700 hover:bg-red-800' onClick={()=>{exportCSV(sortedLog.map(e=>({Date:fmtDate(e.date),Member:e.member,Calls:e.calls,Meetings:e.meetings,Leads:e.leads,Closures:e.closures,Collection:e.collection,Revenue_K:e.revenue})),'TWG_Daily_Log.csv');toast('Daily log exported');}}>⬇ Export Daily Log CSV</Button>
+                <Button className='w-full bg-red-700 hover:bg-red-800' onClick={()=>{exportCSV(sortedLog.map(e=>({Date:fmtDate(e.date),Member:e.member,Calls:e.calls,Meetings:e.meetings,Leads:e.leads,Closures:e.closures,OrderIntake_K:e.orderIntake,Sales_K:e.sales})),'TWG_Daily_Log.csv');toast('Daily log exported');}}>⬇ Export Daily Log CSV</Button>
                 <Button variant='outline' className='w-full' onClick={()=>window.print()}>🖨 Print Report</Button>
               </CardContent></Card>
             </div>

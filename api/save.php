@@ -48,8 +48,8 @@ try {
                 ':meetings'   => (int)($e['meetings'] ?? 0),
                 ':leads'      => (int)($e['leads'] ?? 0),
                 ':closures'   => (int)($e['closures'] ?? 0),
-                ':collection' => (float)($e['collection'] ?? 0),
-                ':revenue'    => (float)($e['revenue'] ?? 0),
+                ':orderIntake' => (float)($e['orderIntake'] ?? 0),
+                ':sales'    => (float)($e['sales'] ?? 0),
                 ':by'         => $e['submittedBy'] ?? '',
                 ':at'         => $e['submittedAt'] ?? date('Y-m-d H:i:s'),
             ]);

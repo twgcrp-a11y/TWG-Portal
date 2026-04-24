@@ -18,7 +18,7 @@ try {
 
     // Daily log — all entries
     $logs = $db->query("SELECT id, member, DATE_FORMAT(log_date,'%Y-%m-%d') as date,
-        calls, meetings, leads, closures, collection, revenue,
+        calls, meetings, leads, closures, order_intake as orderIntake, sales,
         submitted_by as submittedBy, submitted_at as submittedAt
         FROM twg_daily_log ORDER BY submitted_at DESC")->fetchAll();
 
