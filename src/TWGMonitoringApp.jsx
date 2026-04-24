@@ -42,7 +42,7 @@ const makeEmptyActivities = () =>
   Object.fromEntries(seed.filter(s => s.name !== 'Wahed').map(s => [s.name, EMPTY_DAILY()]));
 
 const safeParse = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
-const fmt       = n => Number(n).toLocaleString('en-IN');
+const fmt       = n => { const v = Number(n); return isNaN(v) ? '0' : v.toLocaleString('en-IN'); };
 const pctColor  = p => p>=100?'text-green-600':p>=70?'text-yellow-600':'text-red-500';
 const pctBg     = p => p>=100?'bg-green-50 border-green-200':p>=70?'bg-yellow-50 border-yellow-200':'bg-red-50 border-red-200';
 const fmtDate   = d => { const dt=new Date(d); return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); };
@@ -225,8 +225,8 @@ export default function TWGMonitoringApp() {
       meetings: entries.reduce((a,e)=>a+safeParse(e.meetings),0),
       leads:    entries.reduce((a,e)=>a+safeParse(e.leads),0),
       closures: entries.reduce((a,e)=>a+safeParse(e.closures),0),
-      orderIntake: entries.reduce((a,e)=>a+safeParse(e.orderIntake),0),
-      sales:    entries.reduce((a,e)=>a+safeParse(e.sales),0),
+      orderIntake: entries.reduce((a,e)=>a+safeParse(e.orderIntake??e.collection),0),
+      sales:    entries.reduce((a,e)=>a+safeParse(e.sales??e.revenue),0),
       days:     entries.length,
     };
   });
@@ -547,8 +547,8 @@ export default function TWGMonitoringApp() {
                               <td className='py-2 px-2'>{e?e.meetings:'—'}</td>
                               <td className='py-2 px-2'>{e?e.leads:'—'}</td>
                               <td className='py-2 px-2'>{e?e.closures:'—'}</td>
-                              <td className='py-2 px-2'>{e?`₹${fmt(e.orderIntake)}K`:'—'}</td>
-                              <td className='py-2 px-2'>{e?`₹${fmt(e.sales)}K`:'—'}</td>
+                              <td className='py-2 px-2'>{e?`₹${fmt(e.orderIntake??e.collection??0)}K`:'—'}</td>
+                              <td className='py-2 px-2'>{e?`₹${fmt(e.sales??e.revenue??0)}K`:'—'}</td>
                               <td className='py-2 px-2'>{e?<span className='text-green-600 text-xs font-medium'>✓ Done</span>:<span className='text-red-400 text-xs'>Pending</span>}</td>
                             </tr>
                           );
@@ -733,8 +733,8 @@ export default function TWGMonitoringApp() {
                         <div><div className='text-xs text-gray-400'>Meetings</div><div className='font-semibold'>{e.meetings}</div></div>
                         <div><div className='text-xs text-gray-400'>Leads</div><div className='font-semibold'>{e.leads}</div></div>
                         <div><div className='text-xs text-gray-400'>Closures</div><div className='font-semibold'>{e.closures}</div></div>
-                        <div><div className='text-xs text-gray-400'>Order Intake</div><div className='font-semibold'>₹{fmt(e.orderIntake)}K</div></div>
-                        <div><div className='text-xs text-gray-400'>Sales</div><div className='font-semibold text-green-600'>₹{fmt(e.sales)}K</div></div>
+                        <div><div className='text-xs text-gray-400'>Order Intake</div><div className='font-semibold'>₹{fmt(e.orderIntake??e.collection??0)}K</div></div>
+                        <div><div className='text-xs text-gray-400'>Sales</div><div className='font-semibold text-green-600'>₹{fmt(e.sales??e.revenue??0)}K</div></div>
                       </div>
                     </div>
                   ))}
