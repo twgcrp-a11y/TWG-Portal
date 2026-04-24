@@ -294,7 +294,7 @@ export default function TWGMonitoring() {
       <div className='flex items-center justify-between flex-wrap gap-2'>
         <div>
           <h1 className='text-2xl font-bold text-red-700'>TWG Monitoring Portal</h1>
-          <p className='text-sm text-muted-foreground'>portal.technoworldgroup.com | {dbStatus}</p>
+          <p className='text-sm text-muted-foreground'>portal.technoworldgroup.com</p>
         </div>
         <RoleBadge label={access.displayRole} />
       </div>
