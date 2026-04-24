@@ -389,6 +389,18 @@ export default function TWGMonitoringApp() {
   const updateAdmission = (dept,val) => { if(!access.isCEO&&!access.isDelivery)return; setAdmissions(p=>({...p,[dept]:safeParse(val)})); };
   const doReset=()=>{ localStorage.removeItem('twg_portal_db'); setTeam(seed); setAdmissions(Object.fromEntries(depts.map(d=>[d,0]))); setDailyLog([]); setHistory([]); setLastSaved(''); setDbStatus('Reset'); setConfirmReset(false); toast('Local database reset','error'); };
 
+  // Targeted reset — clears only daily log + admissions, keeps team targets
+  const resetActivityData = async () => {
+    setDailyLog([]);
+    setAdmissions(Object.fromEntries(depts.map(d=>[d,0])));
+    setLastSaved('');
+    // Sync cleared data to DB
+    const ok = await api.save({ user: currentUser, team, admissions: Object.fromEntries(depts.map(d=>[d,0])), dailyLog: [], month, period });
+    if (ok) { setDbStatus('Synced ✓'); toast('Daily log, Sales, Order Intake & Delivery cleared ✓'); }
+    else { toast('Cleared locally — sync manually', 'error'); }
+    setConfirmReset(false);
+  };
+
   // ── MemberCard ─────────────────────────────────────────────────────────────
   const MemberCard=({m})=>{
     const canEdit=canEditMember(m.name);
@@ -507,7 +519,8 @@ export default function TWGMonitoringApp() {
   return (
     <div className='min-h-screen bg-gray-50 flex'>
       <Toast toasts={toasts}/>
-      {confirmReset&&<ConfirmDialog msg='Reset all local data? This cannot be undone.' onYes={doReset} onNo={()=>setConfirmReset(false)}/>}
+      {confirmReset==='activity'&&<ConfirmDialog msg='Clear all daily log entries, Sales, Order Intake and Delivery admissions? Team targets are kept.' onYes={resetActivityData} onNo={()=>setConfirmReset(false)}/>}
+      {confirmReset==='full'&&<ConfirmDialog msg='Full reset — wipe ALL data including targets? This cannot be undone.' onYes={doReset} onNo={()=>setConfirmReset(false)}/>}
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-56 bg-slate-900 text-white flex flex-col transition-transform duration-200 ${sidebarOpen?'translate-x-0':'-translate-x-full'} lg:relative lg:translate-x-0 lg:flex`}>
@@ -987,7 +1000,8 @@ export default function TWGMonitoringApp() {
                 <div className='flex gap-2 flex-wrap'>
                   <Button onClick={save} className='bg-red-700 hover:bg-red-800 text-xs h-8'>Save to DB</Button>
                   <Button variant='outline' onClick={()=>loadFromDB(month)} className='text-xs h-8'>↻ Pull from DB</Button>
-                  {access.isCEO&&<Button variant='outline' onClick={()=>setConfirmReset(true)} className='text-xs h-8 text-red-600 border-red-200 hover:bg-red-50'>Reset Local DB</Button>}
+                  {access.isCEO&&<Button variant='outline' onClick={()=>setConfirmReset('activity')} className='text-xs h-8 text-orange-600 border-orange-200 hover:bg-orange-50'>Clear Sales & Delivery</Button>}
+                  {access.isCEO&&<Button variant='outline' onClick={()=>setConfirmReset('full')} className='text-xs h-8 text-red-600 border-red-200 hover:bg-red-50'>Full Reset</Button>}
                 </div>
               </CardContent></Card>
               <Card><CardContent className='p-4 space-y-2'>
