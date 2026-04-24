@@ -1,6 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/$(whoami)/public_html/portal
-    - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -rf dist/. $DEPLOYPATH/
+    - /bin/mkdir -p /home1/pecbuhms/public_html/portal
+    - /bin/cp -rf /home1/pecbuhms/TWG-Portal/dist/. /home1/pecbuhms/public_html/portal/
