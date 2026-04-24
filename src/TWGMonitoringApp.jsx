@@ -1,4 +1,4 @@
-// TWG MONITORING PORTAL — PRODUCTION v3.0
+// TWG MONITORING PORTAL — PRODUCTION v4.0 (MySQL sync)
 // ─────────────────────────────────────────
 // v3 additions:
 //  - Daily Log tab: each member logs calls, meetings, leads, closures, collection, revenue daily
@@ -10,6 +10,7 @@
 //  - Today's entry pre-filled if already submitted
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { api } from './api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -249,31 +250,47 @@ export default function TWGMonitoringApp() {
     window.addEventListener('keydown',h); return()=>window.removeEventListener('keydown',h);
   },[auth,team,admissions,activities,month,period,dailyLog]);
 
-  // ── Persistence ────────────────────────────────────────────────────────────
-  useEffect(()=>{
-    const saved=localStorage.getItem('twg_portal_db');
-    if(saved){ try{ const d=JSON.parse(saved);
-      if(d.team)       setTeam(d.team);
-      if(d.admissions) setAdmissions(d.admissions);
-      if(d.activities) setActivities(d.activities);
-      if(d.month)      setMonth(d.month);
-      if(d.period)     setPeriod(d.period);
-      if(d.history)    setHistory(d.history);
-      if(d.dailyLog)   setDailyLog(d.dailyLog);
-    }catch(e){} }
-    hasLoaded.current=true;
-  },[]);
-  useEffect(()=>{
-    if(!hasLoaded.current)return;
-    localStorage.setItem('twg_portal_db',JSON.stringify({team,admissions,activities,month,period,history,dailyLog,updatedAt:new Date().toISOString()}));
-  },[team,admissions,activities,month,period,history,dailyLog]);
+  // ── Load from MySQL on login (primary source of truth) ─────────────────────
+  const loadFromDB = useCallback(async (monthVal) => {
+    setDbStatus('Loading…');
+    const data = await api.load(monthVal || month);
+    if (data && data.ok) {
+      if (data.team && data.team.length > 0)  setTeam(data.team);
+      if (data.admissions)                    setAdmissions(prev=>({...Object.fromEntries(depts.map(d=>[d,0])),...data.admissions}));
+      if (data.dailyLog)                      setDailyLog(data.dailyLog);
+      if (data.settings?.month)               setMonth(data.settings.month);
+      if (data.settings?.period)              setPeriod(data.settings.period);
+      setDbStatus('Synced ✓');
+      // Also cache locally as fallback
+      localStorage.setItem('twg_portal_db', JSON.stringify({team:data.team,admissions:data.admissions,dailyLog:data.dailyLog,updatedAt:new Date().toISOString()}));
+    } else {
+      // MySQL unavailable — fall back to localStorage
+      const saved = localStorage.getItem('twg_portal_db');
+      if (saved) { try { const d=JSON.parse(saved); if(d.team)setTeam(d.team); if(d.admissions)setAdmissions(d.admissions); if(d.dailyLog)setDailyLog(d.dailyLog); } catch(e){} }
+      setDbStatus('Offline Cache');
+    }
+    hasLoaded.current = true;
+  }, [month]);
+
+  // ── Auto-sync every 60 seconds (keeps CEO dashboard live) ──────────────────
+  useEffect(() => {
+    if (!auth) return;
+    const interval = setInterval(() => loadFromDB(month), 60000);
+    return () => clearInterval(interval);
+  }, [auth, month, loadFromDB]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const login=async()=>{
     setLoginError('');
-    try{ const r=await fetch('/api/login.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,password})}); if(r.ok){setAuth(true);setDbStatus('Connected');setLoginTime(new Date());return;} }catch(e){}
-    if(password==='admin123'){setAuth(true);setDbStatus('Local Mode');setLoginTime(new Date());}
-    else setLoginError('Invalid password. Contact admin if locked out.');
+    const result = await api.login(currentUser, password);
+    if (result.ok) {
+      setAuth(true);
+      setLoginTime(new Date());
+      setDbStatus(result.mode === 'mysql' ? 'Connected' : 'Local Mode');
+      await loadFromDB(month); // load shared data immediately on login
+    } else {
+      setLoginError(result.error || 'Invalid password. Contact admin if locked out.');
+    }
   };
   const logout=()=>{ setAuth(false);setPassword('');setLoginError('');setLoginTime(null);setSidebarOpen(false); };
 
@@ -281,20 +298,21 @@ export default function TWGMonitoringApp() {
     const snapshot={month,totalActual,totalAdmissions,revenuePct,deliveryPct,savedAt:new Date().toISOString()};
     setHistory(prev=>[...prev.filter(h=>h.month!==month),snapshot]);
     setLastSaved(`Saved by ${currentUser} • ${new Date().toLocaleTimeString()}`);
-    try{
-      await fetch('/api/save-team-update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:currentUser,team,admissions,activities,dailyLog,month,period})});
-      setDbStatus('Synced ✓'); toast('Saved & synced ✓');
-    }catch(e){ setDbStatus('Offline Cache'); toast('Saved locally (server unreachable)','error'); }
+    const ok = await api.save({ user:currentUser, team, admissions, dailyLog, month, period });
+    if (ok) { setDbStatus('Synced ✓'); toast('Saved & synced to database ✓'); }
+    else {
+      // Save to localStorage as fallback
+      localStorage.setItem('twg_portal_db', JSON.stringify({team,admissions,dailyLog,month,period,updatedAt:new Date().toISOString()}));
+      setDbStatus('Offline Cache'); toast('Saved locally — server unreachable','error');
+    }
   };
 
-  // ── Daily Log Submit ───────────────────────────────────────────────────────
-  const submitDailyLog=()=>{
+  // ── Daily Log Submit — saves to DB immediately ─────────────────────────────
+  const submitDailyLog=async()=>{
     const member = myDailyMember;
     if(!member){ toast('Select a member first','error'); return; }
-    // Validate at least one field filled
     const vals = Object.values(dailyForm).map(safeParse);
     if(vals.every(v=>v===0)){ toast('Fill at least one field before submitting','error'); return; }
-
     const entry = {
       id:          Date.now(),
       member,
@@ -308,14 +326,19 @@ export default function TWGMonitoringApp() {
       submittedAt: new Date().toISOString(),
       submittedBy: currentUser,
     };
+    // Add to local state immediately for instant UI feedback
     setDailyLog(prev=>[...prev, entry]);
     setDailyForm(EMPTY_DAILY());
-    toast(`Daily log submitted for ${member} ✓`);
+    // Sync to DB right away so CEO sees it immediately
+    const ok = await api.save({ user:currentUser, team, admissions, dailyLog:[...dailyLog, entry], month, period });
+    if(ok) toast(`Daily log submitted & synced ✓`);
+    else   toast(`Daily log saved locally — will sync on next save`,'error');
   };
 
-  const deleteDailyEntry = (id) => {
+  const deleteDailyEntry = async (id) => {
     if(!access.isCEO){ toast('Only CEO can delete entries','error'); return; }
     setDailyLog(prev=>prev.filter(e=>e.id!==id));
+    await api.deleteLog(id);
     toast('Entry deleted');
   };
 
@@ -323,7 +346,7 @@ export default function TWGMonitoringApp() {
   const updateTarget    = (name,val) => { if(!access.isCEO)return; setTeam(p=>p.map(m=>m.name===name?{...m,target:safeParse(val)}:m)); };
   const updateActivity  = (name,f,v) => { if(!canEditMember(name))return; setActivities(p=>({...p,[name]:{...p[name],[f]:v}})); };
   const updateAdmission = (dept,val) => { if(!access.isCEO&&!access.isDelivery)return; setAdmissions(p=>({...p,[dept]:safeParse(val)})); };
-  const doReset=()=>{ localStorage.removeItem('twg_portal_db'); setTeam(seed); setAdmissions(Object.fromEntries(depts.map(d=>[d,0]))); setActivities(makeEmptyActivities()); setDailyLog([]); setHistory([]); setLastSaved(''); setDbStatus('Reset'); setConfirmReset(false); toast('Local database reset','error'); };
+  const doReset=()=>{ localStorage.removeItem('twg_portal_db'); setTeam(seed); setAdmissions(Object.fromEntries(depts.map(d=>[d,0]))); setDailyLog([]); setHistory([]); setLastSaved(''); setDbStatus('Reset'); setConfirmReset(false); toast('Local database reset','error'); };
 
   // ── MemberCard ─────────────────────────────────────────────────────────────
   const MemberCard=({m})=>{
@@ -490,6 +513,7 @@ export default function TWGMonitoringApp() {
             <Select value={month} onValueChange={setMonth}><SelectTrigger className='h-8 text-xs w-28'><SelectValue/></SelectTrigger><SelectContent>{months.map(m=><SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
             <Select value={period} onValueChange={setPeriod}><SelectTrigger className='h-8 text-xs w-24'><SelectValue/></SelectTrigger><SelectContent>{periods.map(p=><SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
             <Button onClick={save} className='h-8 text-xs bg-red-700 hover:bg-red-800'>Save</Button>
+            <Button onClick={()=>loadFromDB(month)} variant='outline' className='h-8 text-xs'>↻ Sync</Button>
             <RoleBadge user={currentUser}/>
           </div>
         </header>
@@ -871,8 +895,8 @@ export default function TWGMonitoringApp() {
                 <div className='flex items-center gap-2'><div className={`w-2 h-2 rounded-full ${dbStatus.includes('Synced')?'bg-green-500':dbStatus.includes('Offline')?'bg-red-500':'bg-yellow-500'}`}/><span className='text-sm font-medium'>{dbStatus}</span></div>
                 <div className='text-xs text-gray-400'>Last: {lastSaved||'Not yet saved'}</div>
                 <div className='flex gap-2 flex-wrap'>
-                  <Button onClick={save} className='bg-red-700 hover:bg-red-800 text-xs h-8'>Sync Now</Button>
-                  <Button variant='outline' onClick={()=>setDbStatus('Sync Requested')} className='text-xs h-8'>Test Connection</Button>
+                  <Button onClick={save} className='bg-red-700 hover:bg-red-800 text-xs h-8'>Save to DB</Button>
+                  <Button variant='outline' onClick={()=>loadFromDB(month)} className='text-xs h-8'>↻ Pull from DB</Button>
                   {access.isCEO&&<Button variant='outline' onClick={()=>setConfirmReset(true)} className='text-xs h-8 text-red-600 border-red-200 hover:bg-red-50'>Reset Local DB</Button>}
                 </div>
               </CardContent></Card>
