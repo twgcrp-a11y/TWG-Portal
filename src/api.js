@@ -45,8 +45,8 @@ export const api = {
     } catch (e) {
       // Offline fallback — server unreachable, allow login with known passwords
       const offlinePasses = {
-        'CEO': 'admin123', 'Abdullah': 'abdullah123', 'Munawar': 'munawar123',
-        'Tameem': 'tameem123', 'Muzamil': 'muzamil123', 'Wahed': 'wahed123',
+        'CEO': 'TwgCeo@2026', 'Abdullah': 'Abd@Twg2026', 'Munawar': 'Mun@Twg2026',
+        'Tameem': 'Tam@Twg2026', 'Muzamil': 'Muz@Twg2026', 'Wahed': 'Wah@Twg2026',
       };
       if (offlinePasses[username] === password) return { ok: true, user: username, mode: 'offline' };
       return { ok: false, error: 'Invalid password' };
