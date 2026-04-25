@@ -37,9 +37,13 @@ export const api = {
       });
       return await r.json();
     } catch (e) {
-      // Offline fallback
-      if (password === 'admin123') return { ok: true, user: username, mode: 'offline' };
-      return { ok: false, error: 'Network error' };
+      // Offline fallback — server unreachable, allow login with known passwords
+      const offlinePasses = {
+        'CEO': 'admin123', 'Abdullah': 'abdullah123', 'Munawar': 'munawar123',
+        'Tameem': 'tameem123', 'Muzamil': 'muzamil123', 'Wahed': 'wahed123',
+      };
+      if (offlinePasses[username] === password) return { ok: true, user: username, mode: 'offline' };
+      return { ok: false, error: 'Invalid password' };
     }
   },
 
