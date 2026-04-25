@@ -2,5 +2,7 @@
 deployment:
   tasks:
     - /bin/mkdir -p /home1/pecbuhms/public_html/portal
+    - /bin/mkdir -p /home1/pecbuhms/public_html/portal/api
     - /bin/rm -rf /home1/pecbuhms/public_html/portal/*
     - /bin/cp -rf /home1/pecbuhms/TWG-Portal/dist/. /home1/pecbuhms/public_html/portal/
+    - /bin/cp -rf /home1/pecbuhms/TWG-Portal/api/. /home1/pecbuhms/public_html/portal/api/
