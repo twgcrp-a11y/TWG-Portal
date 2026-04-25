@@ -1,6 +1,5 @@
 <?php
 // TWG Portal — Run once to create all tables
-// Visit: https://portal.technoworldgroup.com/api/setup.php
 // DELETE this file after running!
 require_once 'db.php';
 corsHeaders();
@@ -46,7 +45,7 @@ try {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
 
-    jsonOut(['ok' => true, 'message' => 'All tables created successfully. Delete setup.php now!']);
+    jsonOut(['ok' => true, 'message' => 'All tables created. Delete setup.php now!']);
 } catch (Exception $e) {
     jsonOut(['ok' => false, 'error' => $e->getMessage()], 500);
 }
