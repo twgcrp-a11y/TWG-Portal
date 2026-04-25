@@ -4,23 +4,29 @@ require_once 'db.php';
 corsHeaders();
 
 try {
-    $db = getDB();
+    $db    = getDB();
+    $month = $_GET['month'] ?? date('F');
 
     // Team
     $team = $db->query("SELECT name, role, target, actual FROM twg_team ORDER BY id")->fetchAll();
 
-    // Admissions for current month (or all if needed)
-    $month   = $_GET['month'] ?? date('F');
-    $admRows = $db->prepare("SELECT dept, value FROM twg_admissions WHERE month = ?");
-    $admRows->execute([$month]);
+    // Admissions for requested month
+    $stmt = $db->prepare("SELECT dept, value FROM twg_admissions WHERE month = ?");
+    $stmt->execute([$month]);
     $admissions = [];
-    foreach ($admRows->fetchAll() as $r) $admissions[$r['dept']] = (int)$r['value'];
+    foreach ($stmt->fetchAll() as $r) $admissions[$r['dept']] = (int)$r['value'];
 
-    // Daily log — all entries
-    $logs = $db->query("SELECT id, member, DATE_FORMAT(log_date,'%Y-%m-%d') as date,
-        calls, meetings, leads, closures, order_intake as orderIntake, sales,
-        submitted_by as submittedBy, submitted_at as submittedAt
-        FROM twg_daily_log ORDER BY submitted_at DESC")->fetchAll();
+    // Daily log — all entries, newest first
+    $logs = $db->query("SELECT
+        id, member,
+        DATE_FORMAT(log_date,'%Y-%m-%d') AS date,
+        calls, meetings, leads, closures,
+        order_intake  AS orderIntake,
+        sales,
+        submitted_by  AS submittedBy,
+        submitted_at  AS submittedAt
+        FROM twg_daily_log
+        ORDER BY submitted_at DESC")->fetchAll();
 
     // Settings
     $settings = [];

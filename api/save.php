@@ -1,5 +1,5 @@
 <?php
-// TWG Portal — Save team/admissions/daily log to MySQL
+// TWG Portal — Save all data to MySQL
 require_once 'db.php';
 corsHeaders();
 
@@ -9,7 +9,7 @@ if (!$input) jsonOut(['ok' => false, 'error' => 'Invalid JSON'], 400);
 try {
     $db = getDB();
 
-    // ── Save team actuals & targets ──────────────────────────────────────────
+    // ── Team targets ─────────────────────────────────────────────────────────
     if (!empty($input['team'])) {
         $stmt = $db->prepare("INSERT INTO twg_team (name, role, target, actual)
             VALUES (:name, :role, :target, :actual)
@@ -17,14 +17,14 @@ try {
         foreach ($input['team'] as $m) {
             $stmt->execute([
                 ':name'   => $m['name'],
-                ':role'   => $m['role'],
+                ':role'   => $m['role']   ?? '',
                 ':target' => (float)($m['target'] ?? 0),
-                ':actual' => (float)($m['actual'] ?? 0),
+                ':actual' => (float)($m['actual']  ?? 0),
             ]);
         }
     }
 
-    // ── Save admissions ──────────────────────────────────────────────────────
+    // ── Admissions ────────────────────────────────────────────────────────────
     if (!empty($input['admissions']) && !empty($input['month'])) {
         $stmt = $db->prepare("INSERT INTO twg_admissions (dept, month, value)
             VALUES (:dept, :month, :value)
@@ -34,41 +34,43 @@ try {
         }
     }
 
-    // ── Save daily log entries (only new ones — identified by id) ────────────
+    // ── Daily log ─────────────────────────────────────────────────────────────
     if (!empty($input['dailyLog'])) {
-        $stmt = $db->prepare("INSERT IGNORE INTO twg_daily_log
-            (id, member, log_date, calls, meetings, leads, closures, collection, revenue, submitted_by, submitted_at)
-            VALUES (:id, :member, :date, :calls, :meetings, :leads, :closures, :collection, :revenue, :by, :at)");
+        $stmt = $db->prepare("INSERT INTO twg_daily_log
+            (id, member, log_date, calls, meetings, leads, closures, order_intake, sales, submitted_by, submitted_at)
+            VALUES (:id, :member, :date, :calls, :meetings, :leads, :closures, :orderIntake, :sales, :by, :at)
+            ON DUPLICATE KEY UPDATE
+                calls=VALUES(calls), meetings=VALUES(meetings), leads=VALUES(leads),
+                closures=VALUES(closures), order_intake=VALUES(order_intake), sales=VALUES(sales)");
         foreach ($input['dailyLog'] as $e) {
             $stmt->execute([
-                ':id'         => (int)$e['id'],
-                ':member'     => $e['member'],
-                ':date'       => $e['date'],
-                ':calls'      => (int)($e['calls'] ?? 0),
-                ':meetings'   => (int)($e['meetings'] ?? 0),
-                ':leads'      => (int)($e['leads'] ?? 0),
-                ':closures'   => (int)($e['closures'] ?? 0),
-                ':orderIntake' => (float)($e['orderIntake'] ?? 0),
-                ':sales'    => (float)($e['sales'] ?? 0),
-                ':by'         => $e['submittedBy'] ?? '',
-                ':at'         => $e['submittedAt'] ?? date('Y-m-d H:i:s'),
+                ':id'          => (int)($e['id'] ?? 0),
+                ':member'      => $e['member']      ?? '',
+                ':date'        => $e['date']         ?? date('Y-m-d'),
+                ':calls'       => (int)($e['calls']      ?? 0),
+                ':meetings'    => (int)($e['meetings']   ?? 0),
+                ':leads'       => (int)($e['leads']      ?? 0),
+                ':closures'    => (int)($e['closures']   ?? 0),
+                ':orderIntake' => (float)($e['orderIntake'] ?? $e['collection'] ?? 0),
+                ':sales'       => (float)($e['sales']       ?? $e['revenue']    ?? 0),
+                ':by'          => $e['submittedBy']  ?? '',
+                ':at'          => $e['submittedAt']  ?? date('Y-m-d H:i:s'),
             ]);
         }
     }
 
-    // ── Save settings (month, period) ────────────────────────────────────────
-    if (!empty($input['month'])) {
-        $db->prepare("INSERT INTO twg_settings (key_name, value) VALUES ('month', ?)
-            ON DUPLICATE KEY UPDATE value=VALUES(value)")->execute([$input['month']]);
+    // ── Settings ──────────────────────────────────────────────────────────────
+    $settings = [
+        'month'           => $input['month']  ?? '',
+        'period'          => $input['period'] ?? '',
+        'last_updated_by' => $input['user']   ?? '',
+        'last_updated_at' => date('Y-m-d H:i:s'),
+    ];
+    $stmt = $db->prepare("INSERT INTO twg_settings (key_name, value)
+        VALUES (:k, :v) ON DUPLICATE KEY UPDATE value=VALUES(value)");
+    foreach ($settings as $k => $v) {
+        if ($v) $stmt->execute([':k' => $k, ':v' => $v]);
     }
-    if (!empty($input['period'])) {
-        $db->prepare("INSERT INTO twg_settings (key_name, value) VALUES ('period', ?)
-            ON DUPLICATE KEY UPDATE value=VALUES(value)")->execute([$input['period']]);
-    }
-    $db->prepare("INSERT INTO twg_settings (key_name, value) VALUES ('last_updated_by', ?)
-        ON DUPLICATE KEY UPDATE value=VALUES(value)")->execute([$input['user'] ?? 'unknown']);
-    $db->prepare("INSERT INTO twg_settings (key_name, value) VALUES ('last_updated_at', NOW())
-        ON DUPLICATE KEY UPDATE value=NOW()")->execute([]);
 
     jsonOut(['ok' => true, 'message' => 'Saved']);
 } catch (Exception $e) {

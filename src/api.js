@@ -21,8 +21,14 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      return r.ok;
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        console.error('TWG Save error:', data.error);
+        return false;
+      }
+      return true;
     } catch (e) {
+      console.error('TWG Save network error:', e);
       return false;
     }
   },
