@@ -166,7 +166,10 @@ export default function TWGMonitoringApp() {
   const [activeTab,    setActiveTab]    = useState('dashboard');
   const [confirmReset, setConfirmReset] = useState(false);
   const [editTargets,  setEditTargets]  = useState(false);
-  const [editingEntry, setEditingEntry] = useState(null);  // { id, fields }
+  const [editingEntry,  setEditingEntry]  = useState(null);  // { id, fields }
+  const [pwdForm,       setPwdForm]       = useState({ username: 'Abdullah', newPassword: '', confirm: '' });
+  const [pwdMsg,        setPwdMsg]        = useState('');
+  const [adminPwdInput, setAdminPwdInput] = useState('');
   const hasLoaded  = useRef(false);
   const sessionRef = useRef(null);
 
@@ -388,6 +391,32 @@ export default function TWGMonitoringApp() {
   const updateActivity  = (name,f,v) => { if(!canEditMember(name))return; setActivities(p=>({...p,[name]:{...p[name],[f]:v}})); };
   const updateAdmission = (dept,val) => { if(!access.isCEO&&!access.isDelivery)return; setAdmissions(p=>({...p,[dept]:safeParse(val)})); };
   const doReset=()=>{ localStorage.removeItem('twg_portal_db'); setTeam(seed); setAdmissions(Object.fromEntries(depts.map(d=>[d,0]))); setDailyLog([]); setHistory([]); setLastSaved(''); setDbStatus('Reset'); setConfirmReset(false); toast('Local database reset','error'); };
+
+  // Change team member password (CEO only)
+  const changePassword = async () => {
+    setPwdMsg('');
+    if (!pwdForm.newPassword) { setPwdMsg('❌ Enter a new password'); return; }
+    if (pwdForm.newPassword.length < 6) { setPwdMsg('❌ Password must be at least 6 characters'); return; }
+    if (pwdForm.newPassword !== pwdForm.confirm) { setPwdMsg('❌ Passwords do not match'); return; }
+    try {
+      const r = await fetch('/api/change-password.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword: adminPwdInput, username: pwdForm.username, newPassword: pwdForm.newPassword }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        setPwdMsg(`✅ Password updated for ${pwdForm.username}`);
+        setPwdForm(p => ({ ...p, newPassword: '', confirm: '' }));
+        setAdminPwdInput('');
+        toast(`Password updated for ${pwdForm.username} ✓`);
+      } else {
+        setPwdMsg(`❌ ${data.error}`);
+      }
+    } catch (e) {
+      setPwdMsg('❌ Network error — try again');
+    }
+  };
 
   // Targeted reset — clears only daily log + admissions, keeps team targets
   const resetActivityData = async () => {
@@ -1012,6 +1041,56 @@ export default function TWGMonitoringApp() {
                 <div className='text-xs text-gray-400 pt-2'>Daily log entries: <span className='font-bold text-gray-600'>{dailyLog.length}</span></div>
               </CardContent></Card>
             </div>
+          </div>}
+
+          {/* ── PASSWORD MANAGEMENT (CEO only) ── */}
+          {activeTab==='db' && canSeeTab('db') && access.isCEO && <div className='mt-4'>
+            <Card className='border-orange-200'>
+              <CardContent className='p-5 space-y-4'>
+                <div>
+                  <h3 className='font-bold text-red-700'>🔐 Team Password Manager</h3>
+                  <p className='text-xs text-gray-500 mt-0.5'>Change any team member's login password</p>
+                </div>
+                <div className='grid md:grid-cols-2 gap-4'>
+                  <div className='space-y-3'>
+                    <div>
+                      <label className='text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1'>Your CEO Password (to confirm)</label>
+                      <Input type='password' value={adminPwdInput} onChange={e=>setAdminPwdInput(e.target.value)} placeholder='Enter your CEO password' className='h-9'/>
+                    </div>
+                    <div>
+                      <label className='text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1'>Select User</label>
+                      <Select value={pwdForm.username} onValueChange={v=>setPwdForm(p=>({...p,username:v}))}>
+                        <SelectTrigger className='h-9'><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(ACCESS).map(u=><SelectItem key={u} value={u}>{u}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className='text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1'>New Password</label>
+                      <Input type='password' value={pwdForm.newPassword} onChange={e=>setPwdForm(p=>({...p,newPassword:e.target.value}))} placeholder='Min 6 characters' className='h-9'/>
+                    </div>
+                    <div>
+                      <label className='text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1'>Confirm Password</label>
+                      <Input type='password' value={pwdForm.confirm} onChange={e=>setPwdForm(p=>({...p,confirm:e.target.value}))} placeholder='Repeat new password' className='h-9'
+                        onKeyDown={e=>e.key==='Enter'&&changePassword()}/>
+                    </div>
+                    <Button onClick={changePassword} className='w-full bg-orange-600 hover:bg-orange-700'>Update Password</Button>
+                    {pwdMsg && <div className={`text-sm font-medium p-2 rounded-lg ${pwdMsg.startsWith('✅')?'bg-green-50 text-green-700 border border-green-200':'bg-red-50 text-red-700 border border-red-200'}`}>{pwdMsg}</div>}
+                  </div>
+                  <div className='bg-gray-50 rounded-xl p-4 space-y-2'>
+                    <div className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2'>Current Default Passwords</div>
+                    {[['CEO','TwgCeo@2026'],['Abdullah','Abd@Twg2026'],['Munawar','Mun@Twg2026'],['Tameem','Tam@Twg2026'],['Muzamil','Muz@Twg2026'],['Wahed','Wah@Twg2026']].map(([u,p])=>(
+                      <div key={u} className='flex justify-between items-center text-sm py-1 border-b border-gray-200 last:border-0'>
+                        <span className='font-medium'>{u}</span>
+                        <span className='text-gray-400 font-mono text-xs'>{p}</span>
+                      </div>
+                    ))}
+                    <p className='text-xs text-gray-400 pt-1'>Once changed via this form, the new password overrides the default.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>}
 
         </main>

@@ -6,32 +6,31 @@ $input    = json_decode(file_get_contents('php://input'), true);
 $username = trim($input['username'] ?? '');
 $password = trim($input['password'] ?? '');
 
-// ─── Passwords ────────────────────────────────────────────────────────────────
-// Change these before going live. To generate a bcrypt hash:
-// php -r "echo password_hash('yournewpassword', PASSWORD_BCRYPT);"
-// Then replace the plain 'pass' value with '' and put the hash in 'hash'
-$users = [
-    'CEO'      => ['pass' => 'TwgCeo@2026',      'hash' => ''],
-    'Abdullah' => ['pass' => 'Abd@Twg2026',       'hash' => ''],
-    'Munawar'  => ['pass' => 'Mun@Twg2026',       'hash' => ''],
-    'Tameem'   => ['pass' => 'Tam@Twg2026',       'hash' => ''],
-    'Muzamil'  => ['pass' => 'Muz@Twg2026',       'hash' => ''],
-    'Wahed'    => ['pass' => 'Wah@Twg2026',       'hash' => ''],
+// Default passwords (used if no custom password set via portal)
+$defaults = [
+    'CEO'      => 'TwgCeo@2026',
+    'Abdullah' => 'Abd@Twg2026',
+    'Munawar'  => 'Mun@Twg2026',
+    'Tameem'   => 'Tam@Twg2026',
+    'Muzamil'  => 'Muz@Twg2026',
+    'Wahed'    => 'Wah@Twg2026',
 ];
 
-if (!isset($users[$username])) {
+if (!isset($defaults[$username])) {
     jsonOut(['ok' => false, 'error' => 'Invalid credentials'], 401);
 }
 
-$user = $users[$username];
+// Load custom passwords set via portal (bcrypt hashes)
+$pwdFile   = __DIR__ . '/passwords.json';
+$custom    = file_exists($pwdFile) ? (json_decode(file_get_contents($pwdFile), true) ?? []) : [];
 
-// Check plain text (used during initial setup)
-if (!empty($user['pass']) && $password === $user['pass']) {
+// Check custom bcrypt hash first
+if (!empty($custom[$username]) && password_verify($password, $custom[$username])) {
     jsonOut(['ok' => true, 'user' => $username, 'mode' => 'mysql']);
 }
 
-// Check bcrypt hash (production)
-if (!empty($user['hash']) && password_verify($password, $user['hash'])) {
+// Fall back to default password
+if ($password === $defaults[$username]) {
     jsonOut(['ok' => true, 'user' => $username, 'mode' => 'mysql']);
 }
 
