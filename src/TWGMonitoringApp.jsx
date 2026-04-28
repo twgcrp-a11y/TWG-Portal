@@ -30,7 +30,7 @@ const TODAY = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
 const seed = [
   { name: "Abdullah Qidvai + CA's BD Team", role: 'Central Sales Team',       target: 15, actual: 0 },
-  { name: 'Abdullah Qidvai',                role: 'BL Head - Talent Acquisition', target: 3,  actual: 0 },
+  { name: 'AQ',                             role: 'BL Head - Talent Acquisition', target: 3,  actual: 0 },
   { name: 'Tameem', role: 'BL Head - GDC Development', target: 3, actual: 0 },
   { name: 'Muzamil', role: 'BL Head - Academic Wing', target: 3, actual: 0 },
   { name: 'Munawar', role: 'Direct Hiring', target: 3, actual: 0 },
@@ -54,8 +54,8 @@ const ACCESS = {
   Munawar:  { isCEO:false, isDelivery:false, teamName:'Munawar',          canEdit:['Munawar'],                                                                   tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'Direct Hiring',        color:'bg-purple-100 text-purple-800 border-purple-200' },
   Tameem:   { isCEO:false, isDelivery:false, teamName:'Tameem',           canEdit:['Tameem'],                                                                    tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'BL Head – GDC',        color:'bg-green-100 text-green-800 border-green-200' },
   Muzamil:  { isCEO:false, isDelivery:false, teamName:'Muzamil',          canEdit:['Muzamil'],                                                                   tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'BL Head – Academic',   color:'bg-orange-100 text-orange-800 border-orange-200' },
-  AQ:       { isCEO:false, isDelivery:false, teamName:'Abdullah Qidvai',
-    canEdit:['Abdullah Qidvai'],
+  AQ:       { isCEO:false, isDelivery:false, teamName:'AQ',
+    canEdit:['AQ'],
     tabs:['dashboard','daily','team','reports','ops','db'],
     label:'BL Head – Talent Acquisition', color:'bg-indigo-100 text-indigo-800 border-indigo-200' },
   Wahed:    { isCEO:false, isDelivery:true,  teamName:'Wahed',            canEdit:[],                                                                            tabs:['ops'],                                                                           label:'Delivery Ops Head',    color:'bg-teal-100 text-teal-800 border-teal-200' },
