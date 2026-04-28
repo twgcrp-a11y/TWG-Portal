@@ -30,7 +30,7 @@ const TODAY = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
 const seed = [
   { name: "Abdullah Qidvai + CA's BD Team", role: 'Central Sales Team',       target: 15, actual: 0 },
-  { name: 'Abdullah Qidvai',                role: 'Talent Acquisition',        target: 3,  actual: 0 },
+  { name: 'Abdullah Qidvai',                role: 'BL Head - Talent Acquisition', target: 3,  actual: 0 },
   { name: 'Tameem', role: 'BL Head - GDC Development', target: 3, actual: 0 },
   { name: 'Muzamil', role: 'BL Head - Academic Wing', target: 3, actual: 0 },
   { name: 'Munawar', role: 'Direct Hiring', target: 3, actual: 0 },
@@ -50,10 +50,14 @@ const fmtDate   = d => { const dt=new Date(d); return dt.toLocaleDateString('en-
 // ─── Access Control ───────────────────────────────────────────────────────────
 const ACCESS = {
   CEO:      { isCEO:true,  isDelivery:false, teamName:null,               canEdit:seed.map(s=>s.name),                                                          tabs:['dashboard','daily','team','reports','analysis','bonus','ceo','review','ops','db'], label:'CEO — Full Access',    color:'bg-red-100 text-red-800 border-red-200' },
-  Abdullah: { isCEO:false, isDelivery:false, teamName:'Abdullah Qidvai',  canEdit:["Abdullah Qidvai + CA's BD Team",'Abdullah Qidvai','Munawar'],                 tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'Sales Team Lead',      color:'bg-blue-100 text-blue-800 border-blue-200' },
+  Abdullah: { isCEO:false, isDelivery:false, teamName:"Abdullah Qidvai + CA's BD Team",  canEdit:["Abdullah Qidvai + CA's BD Team",'Munawar'],                 tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'Sales Team Lead',      color:'bg-blue-100 text-blue-800 border-blue-200' },
   Munawar:  { isCEO:false, isDelivery:false, teamName:'Munawar',          canEdit:['Munawar'],                                                                   tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'Direct Hiring',        color:'bg-purple-100 text-purple-800 border-purple-200' },
   Tameem:   { isCEO:false, isDelivery:false, teamName:'Tameem',           canEdit:['Tameem'],                                                                    tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'BL Head – GDC',        color:'bg-green-100 text-green-800 border-green-200' },
   Muzamil:  { isCEO:false, isDelivery:false, teamName:'Muzamil',          canEdit:['Muzamil'],                                                                   tabs:['dashboard','daily','team','reports','ops','db'],                                  label:'BL Head – Academic',   color:'bg-orange-100 text-orange-800 border-orange-200' },
+  AQ:       { isCEO:false, isDelivery:false, teamName:'Abdullah Qidvai',
+    canEdit:['Abdullah Qidvai'],
+    tabs:['dashboard','daily','team','reports','ops','db'],
+    label:'BL Head – Talent Acquisition', color:'bg-indigo-100 text-indigo-800 border-indigo-200' },
   Wahed:    { isCEO:false, isDelivery:true,  teamName:'Wahed',            canEdit:[],                                                                            tabs:['ops'],                                                                           label:'Delivery Ops Head',    color:'bg-teal-100 text-teal-800 border-teal-200' },
 };
 
@@ -879,8 +883,8 @@ export default function TWGMonitoringApp() {
               </div>
             </div>
             <div className='grid lg:grid-cols-3 gap-4'>
-              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🏢 Central Sales</h3>{revenueTeam.slice(0,2).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
-              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🎯 BL Heads</h3>{revenueTeam.slice(2,5).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
+              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🏢 Central Sales</h3>{revenueTeam.slice(0,1).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
+              <Card><CardContent className='p-4 space-y-3'><h3 className='font-bold text-red-700'>🎯 BL Heads</h3>{revenueTeam.slice(1,5).map(m=><MemberCard key={m.name} m={m}/>)}<Button onClick={save} className='w-full bg-red-700 hover:bg-red-800'>Save</Button></CardContent></Card>
               <Card><CardContent className='p-4 space-y-2'>
                 <h3 className='font-bold text-red-700'>🏭 Delivery</h3>
                 {!access.isCEO&&<div className='text-xs text-gray-400 bg-gray-50 rounded-lg p-2'>🔒 Managed by Wahed</div>}
@@ -1080,7 +1084,7 @@ export default function TWGMonitoringApp() {
                   </div>
                   <div className='bg-gray-50 rounded-xl p-4 space-y-2'>
                     <div className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2'>Current Default Passwords</div>
-                    {[['CEO','TwgCeo@2026'],['Abdullah','Abd@Twg2026'],['Munawar','Mun@Twg2026'],['Tameem','Tam@Twg2026'],['Muzamil','Muz@Twg2026'],['Wahed','Wah@Twg2026']].map(([u,p])=>(
+                    {[['CEO','TwgCeo@2026'],['Abdullah','Abd@Twg2026'],['AQ','AQ@Twg2026'],['Munawar','Mun@Twg2026'],['Tameem','Tam@Twg2026'],['Muzamil','Muz@Twg2026'],['Wahed','Wah@Twg2026']].map(([u,p])=>(
                       <div key={u} className='flex justify-between items-center text-sm py-1 border-b border-gray-200 last:border-0'>
                         <span className='font-medium'>{u}</span>
                         <span className='text-gray-400 font-mono text-xs'>{p}</span>

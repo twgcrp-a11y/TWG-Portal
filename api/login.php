@@ -13,6 +13,7 @@ $defaults = [
     'Munawar'  => 'Mun@Twg2026',
     'Tameem'   => 'Tam@Twg2026',
     'Muzamil'  => 'Muz@Twg2026',
+    'AQ'       => 'AQ@Twg2026',
     'Wahed'    => 'Wah@Twg2026',
 ];
 

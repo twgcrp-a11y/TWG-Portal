@@ -21,7 +21,7 @@ if (strlen($newPass) < 6) {
     jsonOut(['ok' => false, 'error' => 'Password must be at least 6 characters'], 400);
 }
 
-$allowed = ['CEO','Abdullah','Munawar','Tameem','Muzamil','Wahed'];
+$allowed = ['CEO','Abdullah','AQ','Munawar','Tameem','Muzamil','Wahed'];
 if (!in_array($username, $allowed)) {
     jsonOut(['ok' => false, 'error' => 'Unknown user'], 400);
 }
